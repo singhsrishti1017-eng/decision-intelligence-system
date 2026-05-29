@@ -69,9 +69,6 @@ col2.metric(
     round(total_profit, 2)
 )
 
-col3.metric(
-    "Average Profit Margin",
-    round(avg_margin, 2)
 )
 
 # Profit Chart
