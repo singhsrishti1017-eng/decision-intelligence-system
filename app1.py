@@ -30,7 +30,7 @@ region_filter = st.sidebar.multiselect(
     "Select Region",
     options=df["Region"].unique(),
     default=df["Region"].unique()
-
+)
 ship_filter = st.sidebar.multiselect(
     "Select Ship Mode",
     options=df["Ship Mode"].unique(),
