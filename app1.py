@@ -53,7 +53,6 @@ filtered_df = df[
 # KPI Calculations
 total_sales = filtered_df["Sales"].sum()
 total_profit = filtered_df["Gross Profit"].sum()
-avg_margin = filtered_df["Profit Margin"].mean()
 
 # KPI Section
 st.subheader("Key Performance Indicators")
@@ -99,7 +98,7 @@ sales_increase = st.slider(
 )
 
 new_sales = total_sales * (1 + sales_increase / 100)
-new_profit = new_sales * avg_margin
+new_profit = new_sales *
 
 st.write("Projected Sales:", round(new_sales, 2))
 st.write("Projected Profit:", round(new_profit, 2))
@@ -135,7 +134,6 @@ st.dataframe(
             "Product Name",
             "Region",
             "Gross Profit",
-            "Profit Margin"
         ]
     ]
 )
