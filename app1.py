@@ -1,8 +1,9 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 
-# ---------------- PAGE SETTINGS ----------------
+# ---------------- PAGE CONFIG ----------------
 st.set_page_config(
     page_title="Business Analytics Dashboard",
     layout="wide"
@@ -10,17 +11,20 @@ st.set_page_config(
 
 # ---------------- TITLE ----------------
 st.title("📊 Business Analytics & Decision Intelligence Dashboard")
-st.markdown("### Sales, Profitability & Customer Insights System")
+st.markdown("### AI-Based Sales, Profit & Regional Performance Analytics")
 
 # ---------------- LOAD DATA ----------------
-df = pd.read_excel("your_file_name.xlsx")
+df = pd.read_excel("data.xlsx")
+
+# ---------------- CLEAN COLUMN NAMES ----------------
+df.columns = df.columns.str.strip()
 
 # ---------------- DATE CONVERSION ----------------
 df["Order Date"] = pd.to_datetime(df["Order Date"])
 df["Ship Date"] = pd.to_datetime(df["Ship Date"])
 
 # ---------------- SIDEBAR FILTERS ----------------
-st.sidebar.header("🔍 Dashboard Filters")
+st.sidebar.header("Dashboard Filters")
 
 region_filter = st.sidebar.multiselect(
     "Select Region",
@@ -40,193 +44,182 @@ ship_filter = st.sidebar.multiselect(
     default=df["Ship Mode"].unique()
 )
 
-# ---------------- FILTERED DATA ----------------
+# ---------------- FILTER DATA ----------------
 filtered_df = df[
     (df["Region"].isin(region_filter)) &
     (df["Profit Class"].isin(category_filter)) &
     (df["Ship Mode"].isin(ship_filter))
 ]
 
-# ---------------- KPI SECTION ----------------
+# ---------------- KPIs ----------------
 total_sales = filtered_df["Sales"].sum()
 total_profit = filtered_df["Gross Profit"].sum()
 total_orders = filtered_df["Order ID"].nunique()
 avg_margin = filtered_df["Profit Margin"].mean()
-total_customers = filtered_df["Customer ID"].nunique()
 
-col1, col2, col3, col4, col5 = st.columns(5)
+st.subheader("📌 Key Performance Indicators")
 
-col1.metric("💰 Total Sales", f"${total_sales:,.0f}")
-col2.metric("📈 Total Profit", f"${total_profit:,.0f}")
-col3.metric("🛒 Orders", total_orders)
-col4.metric("📊 Avg Profit Margin", f"{avg_margin:.2f}%")
-col5.metric("👥 Customers", total_customers)
+col1, col2, col3, col4 = st.columns(4)
+
+col1.metric("Total Sales", f"₹ {total_sales:,.0f}")
+col2.metric("Total Profit", f"₹ {total_profit:,.0f}")
+col3.metric("Total Orders", total_orders)
+col4.metric("Avg Profit Margin", f"{avg_margin:.2f}%")
 
 st.markdown("---")
 
 # ---------------- SALES BY REGION ----------------
-st.subheader("🌍 Sales by Region")
+col1, col2 = st.columns(2)
 
-sales_region = filtered_df.groupby("Region")["Sales"].sum().reset_index()
+with col1:
+    st.subheader("🌍 Sales by Region")
 
-fig1 = px.bar(
-    sales_region,
-    x="Region",
-    y="Sales",
-    color="Region",
-    title="Regional Sales Analysis"
-)
+    region_sales = filtered_df.groupby("Region")["Sales"].sum().reset_index()
 
-st.plotly_chart(fig1, use_container_width=True)
+    fig1 = px.bar(
+        region_sales,
+        x="Region",
+        y="Sales",
+        color="Region",
+        text_auto=True
+    )
 
-# ---------------- PROFIT BY STATE ----------------
-st.subheader("🏙️ Profit by State")
+    st.plotly_chart(fig1, use_container_width=True)
 
-profit_state = (
-    filtered_df.groupby("State or Province")["Gross Profit"]
-    .sum()
-    .reset_index()
-    .sort_values(by="Gross Profit", ascending=False)
-    .head(10)
-)
+with col2:
+    st.subheader("💰 Profit by Region")
 
-fig2 = px.bar(
-    profit_state,
-    x="State or Province",
-    y="Gross Profit",
-    color="Gross Profit",
-    title="Top Profitable States"
-)
+    region_profit = filtered_df.groupby("Region")["Gross Profit"].sum().reset_index()
 
-st.plotly_chart(fig2, use_container_width=True)
+    fig2 = px.pie(
+        region_profit,
+        names="Region",
+        values="Gross Profit"
+    )
 
-# ---------------- SALES TREND ----------------
-st.subheader("📅 Monthly Sales Trend")
+    st.plotly_chart(fig2, use_container_width=True)
 
-monthly_sales = (
-    filtered_df.groupby(filtered_df["Order Date"].dt.to_period("M"))["Sales"]
-    .sum()
-    .reset_index()
-)
+# ---------------- MONTHLY SALES TREND ----------------
+st.subheader("📈 Monthly Sales Trend")
 
-monthly_sales["Order Date"] = monthly_sales["Order Date"].astype(str)
+filtered_df["Month"] = filtered_df["Order Date"].dt.strftime("%b")
+
+month_sales = filtered_df.groupby("Month")["Sales"].sum().reset_index()
 
 fig3 = px.line(
-    monthly_sales,
-    x="Order Date",
+    month_sales,
+    x="Month",
     y="Sales",
-    markers=True,
-    title="Monthly Revenue Trend"
+    markers=True
 )
 
 st.plotly_chart(fig3, use_container_width=True)
 
-# ---------------- SHIP MODE DISTRIBUTION ----------------
-st.subheader("🚚 Ship Mode Distribution")
-
-ship_data = filtered_df["Ship Mode"].value_counts().reset_index()
-ship_data.columns = ["Ship Mode", "Count"]
-
-fig4 = px.pie(
-    ship_data,
-    names="Ship Mode",
-    values="Count",
-    title="Shipping Preferences"
-)
-
-st.plotly_chart(fig4, use_container_width=True)
-
 # ---------------- TOP PRODUCTS ----------------
-st.subheader("🏆 Top Selling Products")
+col1, col2 = st.columns(2)
 
-top_products = (
-    filtered_df.groupby("Product Name")["Sales"]
-    .sum()
-    .reset_index()
-    .sort_values(by="Sales", ascending=False)
-    .head(10)
-)
+with col1:
+    st.subheader("🏆 Top 10 Products by Sales")
 
-fig5 = px.bar(
-    top_products,
-    x="Product Name",
+    top_products = filtered_df.groupby("Product Name")["Sales"].sum().reset_index()
+
+    top_products = top_products.sort_values(
+        by="Sales",
+        ascending=False
+    ).head(10)
+
+    fig4 = px.bar(
+        top_products,
+        x="Sales",
+        y="Product Name",
+        orientation="h",
+        color="Sales"
+    )
+
+    st.plotly_chart(fig4, use_container_width=True)
+
+with col2:
+    st.subheader("🚚 Delivery Days Analysis")
+
+    fig5 = px.histogram(
+        filtered_df,
+        x="Delivery Days",
+        nbins=20,
+        color="Ship Mode"
+    )
+
+    st.plotly_chart(fig5, use_container_width=True)
+
+# ---------------- SALES RANGE ----------------
+col1, col2 = st.columns(2)
+
+with col1:
+    st.subheader("📦 Sales Range Distribution")
+
+    sales_range = filtered_df["Sales Range"].value_counts().reset_index()
+    sales_range.columns = ["Sales Range", "Count"]
+
+    fig6 = px.pie(
+        sales_range,
+        names="Sales Range",
+        values="Count"
+    )
+
+    st.plotly_chart(fig6, use_container_width=True)
+
+with col2:
+    st.subheader("💳 Ship Mode Distribution")
+
+    ship_mode = filtered_df["Ship Mode"].value_counts().reset_index()
+    ship_mode.columns = ["Ship Mode", "Count"]
+
+    fig7 = px.bar(
+        ship_mode,
+        x="Ship Mode",
+        y="Count",
+        color="Ship Mode",
+        text_auto=True
+    )
+
+    st.plotly_chart(fig7, use_container_width=True)
+
+# ---------------- STATE ANALYSIS ----------------
+st.subheader("🗺️ State-wise Sales Performance")
+
+state_sales = filtered_df.groupby("State or Province")["Sales"].sum().reset_index()
+
+state_sales = state_sales.sort_values(
+    by="Sales",
+    ascending=False
+).head(15)
+
+fig8 = px.bar(
+    state_sales,
+    x="State or Province",
     y="Sales",
     color="Sales",
-    title="Top 10 Products"
-)
-
-st.plotly_chart(fig5, use_container_width=True)
-
-# ---------------- PROFIT CLASS ----------------
-st.subheader("📊 Profit Class Analysis")
-
-profit_class = (
-    filtered_df.groupby("Profit Class")["Gross Profit"]
-    .sum()
-    .reset_index()
-)
-
-fig6 = px.bar(
-    profit_class,
-    x="Profit Class",
-    y="Gross Profit",
-    color="Profit Class",
-    title="Profit Category Performance"
-)
-
-st.plotly_chart(fig6, use_container_width=True)
-
-# ---------------- DELIVERY ANALYSIS ----------------
-st.subheader("⏱️ Delivery Days Analysis")
-
-fig7 = px.histogram(
-    filtered_df,
-    x="Delivery Days",
-    nbins=20,
-    title="Delivery Time Distribution"
-)
-
-st.plotly_chart(fig7, use_container_width=True)
-
-# ---------------- SALES RANGE ANALYSIS ----------------
-st.subheader("💵 Sales Range Distribution")
-
-sales_range = filtered_df["Sales Range"].value_counts().reset_index()
-sales_range.columns = ["Sales Range", "Count"]
-
-fig8 = px.pie(
-    sales_range,
-    names="Sales Range",
-    values="Count",
-    title="Sales Range Distribution"
+    text_auto=True
 )
 
 st.plotly_chart(fig8, use_container_width=True)
 
-# ---------------- CUSTOMER TABLE ----------------
-st.subheader("📋 Detailed Dataset")
+# ---------------- DATA TABLE ----------------
+st.subheader("📋 Transaction Data")
 
-st.dataframe(filtered_df.head(50))
+st.dataframe(filtered_df)
 
-# ---------------- INSIGHTS SECTION ----------------
-st.subheader("🤖 Business Insights")
+# ---------------- DOWNLOAD OPTION ----------------
+csv = filtered_df.to_csv(index=False).encode('utf-8')
 
-highest_region = sales_region.sort_values(
-    by="Sales",
-    ascending=False
-).iloc[0]["Region"]
-
-highest_profit_state = profit_state.iloc[0]["State or Province"]
-
-st.success(f"✅ Highest sales generated from: {highest_region}")
-
-st.success(f"✅ Most profitable state: {highest_profit_state}")
-
-st.success("✅ Customers prefer faster shipping methods.")
-
-st.success("✅ High profit products should receive priority marketing.")
+st.download_button(
+    label="⬇ Download Filtered Data",
+    data=csv,
+    file_name='filtered_data.csv',
+    mime='text/csv',
+)
 
 # ---------------- FOOTER ----------------
 st.markdown("---")
-st.markdown("### ✅ Developed by Srishti Singh")
-st.markdown("Business Analytics & Decision Intelligence Project")
+st.markdown(
+    "### ✅ Developed for Business Analytics & Decision Intelligence Project"
+)
