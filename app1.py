@@ -69,8 +69,6 @@ col2.metric(
     round(total_profit, 2)
 )
 
-)
-
 # Profit Chart
 st.subheader("Profit by Product")
 
