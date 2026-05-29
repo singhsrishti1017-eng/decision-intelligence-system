@@ -98,7 +98,7 @@ sales_increase = st.slider(
 )
 
 new_sales = total_sales * (1 + sales_increase / 100)
-new_profit = new_sales *
+new_profit = new_sales * avg_profit
 
 st.write("Projected Sales:", round(new_sales, 2))
 st.write("Projected Profit:", round(new_profit, 2))
